@@ -61,7 +61,7 @@ export default async function DashboardPage({
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ textAlign: "left", background: "#f5f6fa" }}>
-              {["Date", "Name", "Category", "Env", "Status", "Score", "Importance", "Summary"].map((h) => (
+              {["Date", "Name", "Category", "Env", "Status", "Score", "Importance", "Summary", "Screenshot", "Transcript"].map((h) => (
                 <th key={h} style={{ padding: "10px 14px", borderBottom: "1px solid #e8eaf2" }}>{h}</th>
               ))}
             </tr>
@@ -87,12 +87,27 @@ export default async function DashboardPage({
                   <td style={{ padding: "10px 14px", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis" }}>
                     {r.summary || "-"}
                   </td>
+                  <td style={{ padding: "10px 14px" }}>
+                    {r.screenshot_path ? (
+                      <a href={r.screenshot_path} target="_blank" rel="noreferrer">View</a>
+                    ) : "-"}
+                  </td>
+                  <td style={{ padding: "10px 14px" }}>
+                    {r.conversation_text ? (
+                      <details>
+                        <summary style={{ cursor: "pointer", color: "#258ed8" }}>View</summary>
+                        <pre style={{ whiteSpace: "pre-wrap", maxWidth: 400, fontSize: 12, marginTop: 8 }}>
+                          {r.conversation_text}
+                        </pre>
+                      </details>
+                    ) : "-"}
+                  </td>
                 </tr>
               );
             })}
             {runs.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ padding: 24, textAlign: "center", color: "#9ea3b8" }}>
+                <td colSpan={10} style={{ padding: 24, textAlign: "center", color: "#9ea3b8" }}>
                   No results yet — run the eval workflow to populate this dashboard.
                 </td>
               </tr>

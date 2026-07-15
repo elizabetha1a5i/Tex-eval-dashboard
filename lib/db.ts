@@ -13,6 +13,7 @@ export type EvalTest = {
   response_time?: number | null;
   message_count?: number | null;
   screenshot_path?: string | null;
+  conversation_text?: string | null;
 };
 
 export type EvalRun = {
@@ -44,6 +45,7 @@ export async function ensureSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `;
+  await sql`ALTER TABLE eval_runs ADD COLUMN IF NOT EXISTS conversation_text TEXT;`;
   await sql`CREATE INDEX IF NOT EXISTS idx_eval_runs_run_date ON eval_runs (run_date DESC);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_eval_runs_category ON eval_runs (category);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_eval_runs_status ON eval_runs (status);`;
@@ -56,12 +58,12 @@ export async function insertRun(run: EvalRun) {
       INSERT INTO eval_runs (
         test_id, name, category, run_date, environment, methodology, status,
         score, alignment_score, penalty_points, importance, summary,
-        response_time, message_count, screenshot_path
+        response_time, message_count, screenshot_path, conversation_text
       ) VALUES (
         ${t.test_id}, ${t.name}, ${t.category}, ${runDate}, ${run.environment}, ${run.methodology ?? null},
         ${t.status}, ${t.score ?? null}, ${t.alignment_score ?? null}, ${t.penalty_points ?? null},
         ${t.importance ?? null}, ${t.summary ?? null}, ${t.response_time ?? null},
-        ${t.message_count ?? null}, ${t.screenshot_path ?? null}
+        ${t.message_count ?? null}, ${t.screenshot_path ?? null}, ${t.conversation_text ?? null}
       );
     `;
   }
