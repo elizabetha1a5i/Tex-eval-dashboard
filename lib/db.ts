@@ -23,12 +23,6 @@ export type EvalRun = {
 };
 
 export async function ensureSchema() {
-  // One-time reset: the table was created earlier with a schema that
-  // doesn't match the runner's real output (score was NUMERIC, not TEXT).
-  // Safe to drop since no run has ever successfully inserted a row.
-  // TODO: remove this DROP once the correct schema has been deployed once.
-  await sql`DROP TABLE IF EXISTS eval_runs;`;
-
   await sql`
     CREATE TABLE IF NOT EXISTS eval_runs (
       id BIGSERIAL PRIMARY KEY,
