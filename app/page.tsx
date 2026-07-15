@@ -1,0 +1,103 @@
+import { listRuns } from "@/lib/db";
+
+function statusColor(status: string) {
+  const s = (status || "").toLowerCase();
+  if (s === "pass") return { bg: "#e6f4ea", fg: "#137333" };
+  if (s === "warn") return { bg: "#fef9e7", fg: "#7a5200" };
+  return { bg: "#fef2f2", fg: "#b91c1c" };
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { environment?: string; category?: string; status?: string };
+}) {
+  const runs = await listRuns({
+    environment: searchParams.environment,
+    category: searchParams.category,
+    status: searchParams.status,
+    limit: 200,
+  });
+
+  const categories = Array.from(new Set(runs.map((r: any) => r.category).filter(Boolean)));
+  const environments = Array.from(new Set(runs.map((r: any) => r.environment).filter(Boolean)));
+
+  return (
+    <main style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px" }}>
+      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Tex Eval Dashboard</h1>
+      <p style={{ color: "#5a6478", marginBottom: 24 }}>
+        Dynamic eval results, pushed automatically from GitHub Actions.
+      </p>
+
+      <form style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+        <select name="environment" defaultValue={searchParams.environment ?? ""}>
+          <option value="">All environments</option>
+          {environments.map((e) => (
+            <option key={e} value={e}>{e}</option>
+          ))}
+        </select>
+        <select name="category" defaultValue={searchParams.category ?? ""}>
+          <option value="">All categories</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <select name="status" defaultValue={searchParams.status ?? ""}>
+          <option value="">All statuses</option>
+          <option value="pass">Pass</option>
+          <option value="warn">Warn</option>
+          <option value="fail">Fail</option>
+        </select>
+        <button type="submit" style={{ padding: "6px 16px", borderRadius: 8, border: "1px solid #ccc" }}>
+          Filter
+        </button>
+      </form>
+
+      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <thead>
+            <tr style={{ textAlign: "left", background: "#f5f6fa" }}>
+              {["Date", "Name", "Category", "Env", "Status", "Score", "Failed criteria", "Notes"].map((h) => (
+                <th key={h} style={{ padding: "10px 14px", borderBottom: "1px solid #e8eaf2" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {runs.map((r: any) => {
+              const c = statusColor(r.status);
+              return (
+                <tr key={r.id} style={{ borderBottom: "1px solid #f0f1f6" }}>
+                  <td style={{ padding: "10px 14px", whiteSpace: "nowrap" }}>
+                    {new Date(r.run_date).toLocaleString()}
+                  </td>
+                  <td style={{ padding: "10px 14px" }}>{r.name}</td>
+                  <td style={{ padding: "10px 14px" }}>{r.category}</td>
+                  <td style={{ padding: "10px 14px" }}>{r.environment}</td>
+                  <td style={{ padding: "10px 14px" }}>
+                    <span style={{ background: c.bg, color: c.fg, padding: "3px 10px", borderRadius: 20, fontWeight: 700, fontSize: 11, textTransform: "uppercase" }}>
+                      {r.status}
+                    </span>
+                  </td>
+                  <td style={{ padding: "10px 14px" }}>{r.score ?? "-"}</td>
+                  <td style={{ padding: "10px 14px", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {r.all_failed_criteria || "-"}
+                  </td>
+                  <td style={{ padding: "10px 14px", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {r.summary || r.notes || "-"}
+                  </td>
+                </tr>
+              );
+            })}
+            {runs.length === 0 && (
+              <tr>
+                <td colSpan={8} style={{ padding: 24, textAlign: "center", color: "#9ea3b8" }}>
+                  No results yet — run the eval workflow to populate this dashboard.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </main>
+  );
+}
