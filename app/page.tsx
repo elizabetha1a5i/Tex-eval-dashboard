@@ -1,4 +1,4 @@
-import { listRuns } from "@/lib/db";
+import { listRuns, ensureSchema } from "@/lib/db";
 
 function statusColor(status: string) {
   const s = (status || "").toLowerCase();
@@ -12,6 +12,7 @@ export default async function DashboardPage({
 }: {
   searchParams: { environment?: string; category?: string; status?: string };
 }) {
+  await ensureSchema();
   const runs = await listRuns({
     environment: searchParams.environment,
     category: searchParams.category,
