@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureSchema, insertResults, listRuns, EvalResult } from "@/lib/db";
+import { ensureSchema, insertRun, listRuns, EvalRun } from "@/lib/db";
 
 function isAuthorized(req: NextRequest) {
   const expected = process.env.INGEST_API_KEY;
@@ -13,17 +13,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
-  const results: EvalResult[] = Array.isArray(body) ? body : body.results;
+  const body: EvalRun = await req.json();
 
-  if (!Array.isArray(results) || results.length === 0) {
-    return NextResponse.json({ error: "Expected a non-empty results array" }, { status: 400 });
+  if (!body || !Array.isArray(body.tests) || body.tests.length === 0) {
+    return NextResponse.json(
+      { error: "Expected a run object with a non-empty tests array" },
+      { status: 400 }
+    );
   }
 
   await ensureSchema();
-  await insertResults(results);
+  await insertRun(body);
 
-  return NextResponse.json({ inserted: results.length });
+  return NextResponse.json({ inserted: body.tests.length });
 }
 
 export async function GET(req: NextRequest) {

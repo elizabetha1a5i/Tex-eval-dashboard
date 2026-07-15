@@ -58,7 +58,7 @@ export default async function DashboardPage({
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ textAlign: "left", background: "#f5f6fa" }}>
-              {["Date", "Name", "Category", "Env", "Status", "Score", "Failed criteria", "Notes"].map((h) => (
+              {["Date", "Name", "Category", "Env", "Status", "Score", "Importance", "Summary"].map((h) => (
                 <th key={h} style={{ padding: "10px 14px", borderBottom: "1px solid #e8eaf2" }}>{h}</th>
               ))}
             </tr>
@@ -80,11 +80,9 @@ export default async function DashboardPage({
                     </span>
                   </td>
                   <td style={{ padding: "10px 14px" }}>{r.score ?? "-"}</td>
+                  <td style={{ padding: "10px 14px" }}>{r.importance ?? "-"}</td>
                   <td style={{ padding: "10px 14px", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {r.all_failed_criteria || "-"}
-                  </td>
-                  <td style={{ padding: "10px 14px", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {r.summary || r.notes || "-"}
+                    {r.summary || "-"}
                   </td>
                 </tr>
               );

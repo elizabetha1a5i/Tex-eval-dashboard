@@ -1,28 +1,25 @@
 import { sql } from "@vercel/postgres";
 
-export type EvalResult = {
+export type EvalTest = {
   test_id: string;
   name: string;
   category: string;
-  date: string;
-  environment: string;
   status: string;
-  score: number | null;
-  criteria_tested: number | null;
-  criteria_passed: number | null;
-  criteria_failed: number | null;
-  critical_failures: number | null;
-  high_failures: number | null;
-  other_failures: number | null;
-  all_failed_criteria: string | null;
-  url_failures: string | null;
-  url_warnings: string | null;
-  response_time: number | null;
-  message_count: number | null;
-  screenshot_path: string | null;
-  conversation_path: string | null;
-  summary: string | null;
-  notes: string | null;
+  score?: string | null;
+  alignment_score?: number | null;
+  penalty_points?: number | null;
+  importance?: number | null;
+  summary?: string | null;
+  response_time?: number | null;
+  message_count?: number | null;
+  screenshot_path?: string | null;
+};
+
+export type EvalRun = {
+  run_date: string;
+  environment: string;
+  methodology?: string;
+  tests: EvalTest[];
 };
 
 export async function ensureSchema() {
@@ -34,23 +31,16 @@ export async function ensureSchema() {
       category TEXT,
       run_date TIMESTAMPTZ NOT NULL DEFAULT now(),
       environment TEXT,
+      methodology TEXT,
       status TEXT,
-      score NUMERIC,
-      criteria_tested INT,
-      criteria_passed INT,
-      criteria_failed INT,
-      critical_failures INT,
-      high_failures INT,
-      other_failures INT,
-      all_failed_criteria TEXT,
-      url_failures TEXT,
-      url_warnings TEXT,
+      score TEXT,
+      alignment_score NUMERIC,
+      penalty_points NUMERIC,
+      importance NUMERIC,
+      summary TEXT,
       response_time NUMERIC,
       message_count INT,
       screenshot_path TEXT,
-      conversation_path TEXT,
-      summary TEXT,
-      notes TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `;
@@ -59,25 +49,19 @@ export async function ensureSchema() {
   await sql`CREATE INDEX IF NOT EXISTS idx_eval_runs_status ON eval_runs (status);`;
 }
 
-export async function insertResults(results: EvalResult[]) {
-  for (const r of results) {
+export async function insertRun(run: EvalRun) {
+  const runDate = run.run_date ? new Date(run.run_date).toISOString() : new Date().toISOString();
+  for (const t of run.tests) {
     await sql`
       INSERT INTO eval_runs (
-        test_id, name, category, run_date, environment, status, score,
-        criteria_tested, criteria_passed, criteria_failed,
-        critical_failures, high_failures, other_failures,
-        all_failed_criteria, url_failures, url_warnings,
-        response_time, message_count, screenshot_path, conversation_path,
-        summary, notes
+        test_id, name, category, run_date, environment, methodology, status,
+        score, alignment_score, penalty_points, importance, summary,
+        response_time, message_count, screenshot_path
       ) VALUES (
-        ${r.test_id}, ${r.name}, ${r.category},
-        ${r.date ? new Date(r.date).toISOString() : new Date().toISOString()},
-        ${r.environment}, ${r.status}, ${r.score},
-        ${r.criteria_tested}, ${r.criteria_passed}, ${r.criteria_failed},
-        ${r.critical_failures}, ${r.high_failures}, ${r.other_failures},
-        ${r.all_failed_criteria}, ${r.url_failures}, ${r.url_warnings},
-        ${r.response_time}, ${r.message_count}, ${r.screenshot_path}, ${r.conversation_path},
-        ${r.summary}, ${r.notes}
+        ${t.test_id}, ${t.name}, ${t.category}, ${runDate}, ${run.environment}, ${run.methodology ?? null},
+        ${t.status}, ${t.score ?? null}, ${t.alignment_score ?? null}, ${t.penalty_points ?? null},
+        ${t.importance ?? null}, ${t.summary ?? null}, ${t.response_time ?? null},
+        ${t.message_count ?? null}, ${t.screenshot_path ?? null}
       );
     `;
   }
