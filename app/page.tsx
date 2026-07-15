@@ -1,5 +1,8 @@
 import { listRuns, ensureSchema } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function statusColor(status: string) {
   const s = (status || "").toLowerCase();
   if (s === "pass") return { bg: "#e6f4ea", fg: "#137333" };
