@@ -1,5 +1,6 @@
 import { listRuns, ensureSchema } from "@/lib/db";
 import { StatTiles, ResultsDonut, CategoryBreakdown, PassRateOverTime } from "./Charts";
+import SendToSlackButton from "./SendToSlackButton";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -35,11 +36,22 @@ export default async function DashboardPage({
   const categories = Array.from(new Set(runs.map((r: any) => r.category).filter(Boolean)));
   const environments = Array.from(new Set(runs.map((r: any) => r.environment).filter(Boolean)));
 
+  const qs = new URLSearchParams();
+  if (searchParams.environment) qs.set("environment", searchParams.environment);
+  if (searchParams.category) qs.set("category", searchParams.category);
+  if (searchParams.status) qs.set("status", searchParams.status);
+  if (searchParams.dateFrom) qs.set("dateFrom", searchParams.dateFrom);
+  if (searchParams.dateTo) qs.set("dateTo", searchParams.dateTo);
+  const queryString = qs.toString() ? `?${qs.toString()}` : "";
+
   return (
     <main style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Tex Eval Dashboard</h1>
-        <a href="/review" style={{ color: "#258ed8", fontSize: 13, fontWeight: 600 }}>Review results →</a>
+        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+          <SendToSlackButton queryString={queryString} />
+          <a href="/review" style={{ color: "#258ed8", fontSize: 13, fontWeight: 600 }}>Review results →</a>
+        </div>
       </div>
       <p style={{ color: "#5a6478", marginBottom: 24 }}>
         Dynamic eval results, pushed automatically from GitHub Actions.
