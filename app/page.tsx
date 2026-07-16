@@ -49,6 +49,20 @@ export default async function DashboardPage({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Tex Eval Dashboard</h1>
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+          <a
+            href={`/api/eval-results/export${queryString}`}
+            style={{
+              padding: "6px 16px",
+              borderRadius: 8,
+              border: "1px solid #ccc",
+              color: "#0f1e2d",
+              fontSize: 13,
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            Export CSV
+          </a>
           <SendToSlackButton queryString={queryString} />
           <a href="/review" style={{ color: "#258ed8", fontSize: 13, fontWeight: 600 }}>Review results →</a>
         </div>
