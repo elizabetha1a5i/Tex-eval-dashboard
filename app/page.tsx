@@ -1,5 +1,5 @@
 import { listRuns, ensureSchema } from "@/lib/db";
-import StatusChart from "./StatusChart";
+import { StatTiles, ResultsDonut, CategoryBreakdown, PassRateOverTime } from "./Charts";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -45,7 +45,16 @@ export default async function DashboardPage({
         Dynamic eval results, pushed automatically from GitHub Actions.
       </p>
 
-      <StatusChart runs={runs as { status: string }[]} />
+      <StatTiles runs={runs as any} />
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+        <PassRateOverTime runs={runs as any} />
+        <ResultsDonut runs={runs as any} />
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <CategoryBreakdown runs={runs as any} />
+      </div>
 
       <form style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
         <select name="environment" defaultValue={searchParams.environment ?? ""}>
