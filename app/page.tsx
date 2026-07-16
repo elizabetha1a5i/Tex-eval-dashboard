@@ -13,13 +13,21 @@ function statusColor(status: string) {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { environment?: string; category?: string; status?: string };
+  searchParams: {
+    environment?: string;
+    category?: string;
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  };
 }) {
   await ensureSchema();
   const runs = await listRuns({
     environment: searchParams.environment,
     category: searchParams.category,
     status: searchParams.status,
+    dateFrom: searchParams.dateFrom,
+    dateTo: searchParams.dateTo ? `${searchParams.dateTo}T23:59:59.999` : undefined,
     limit: 200,
   });
 
@@ -28,7 +36,10 @@ export default async function DashboardPage({
 
   return (
     <main style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px" }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Tex Eval Dashboard</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Tex Eval Dashboard</h1>
+        <a href="/review" style={{ color: "#258ed8", fontSize: 13, fontWeight: 600 }}>Review results →</a>
+      </div>
       <p style={{ color: "#5a6478", marginBottom: 24 }}>
         Dynamic eval results, pushed automatically from GitHub Actions.
       </p>
@@ -52,6 +63,19 @@ export default async function DashboardPage({
           <option value="warn">Warn</option>
           <option value="fail">Fail</option>
         </select>
+        <input
+          type="date"
+          name="dateFrom"
+          defaultValue={searchParams.dateFrom ?? ""}
+          style={{ border: "1.5px solid #e8eaf2", borderRadius: 8, padding: "5px 10px", fontSize: 12 }}
+        />
+        <span style={{ color: "#9ea3b8", fontSize: 12 }}>to</span>
+        <input
+          type="date"
+          name="dateTo"
+          defaultValue={searchParams.dateTo ?? ""}
+          style={{ border: "1.5px solid #e8eaf2", borderRadius: 8, padding: "5px 10px", fontSize: 12 }}
+        />
         <button type="submit" style={{ padding: "6px 16px", borderRadius: 8, border: "1px solid #ccc" }}>
           Filter
         </button>

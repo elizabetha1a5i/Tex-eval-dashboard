@@ -46,6 +46,7 @@ export async function ensureSchema() {
     );
   `;
   await sql`ALTER TABLE eval_runs ADD COLUMN IF NOT EXISTS conversation_text TEXT;`;
+  await sql`ALTER TABLE eval_runs ADD COLUMN IF NOT EXISTS notes TEXT;`;
   await sql`CREATE INDEX IF NOT EXISTS idx_eval_runs_run_date ON eval_runs (run_date DESC);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_eval_runs_category ON eval_runs (category);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_eval_runs_status ON eval_runs (status);`;
@@ -66,6 +67,15 @@ export async function insertRun(run: EvalRun) {
         ${t.message_count ?? null}, ${t.screenshot_path ?? null}, ${t.conversation_text ?? null}
       );
     `;
+  }
+}
+
+export async function updateRun(id: string | number, fields: { status?: string; notes?: string }) {
+  if (fields.status !== undefined) {
+    await sql`UPDATE eval_runs SET status = ${fields.status} WHERE id = ${id};`;
+  }
+  if (fields.notes !== undefined) {
+    await sql`UPDATE eval_runs SET notes = ${fields.notes} WHERE id = ${id};`;
   }
 }
 
