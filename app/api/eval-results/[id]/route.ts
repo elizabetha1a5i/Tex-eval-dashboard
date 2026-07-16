@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureSchema, updateRun } from "@/lib/db";
+import { ensureSchema, updateRun, deleteRun } from "@/lib/db";
 
 function isAuthorized(req: NextRequest) {
   const expected = process.env.INGEST_API_KEY;
@@ -27,4 +27,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   await updateRun(params.id, { status, notes });
 
   return NextResponse.json({ updated: params.id });
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await ensureSchema();
+  await deleteRun(params.id);
+
+  return NextResponse.json({ deleted: params.id });
 }

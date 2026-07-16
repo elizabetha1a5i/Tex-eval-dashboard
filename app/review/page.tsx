@@ -76,6 +76,59 @@ export default function ReviewPage() {
     }
   }
 
+  async function remove(id: string | number) {
+    const key = getKey();
+    if (!key) return;
+    if (!window.confirm("Delete this test result permanently?")) return;
+
+    setSaving(id);
+    try {
+      const res = await fetch(`/api/eval-results/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${key}` },
+      });
+      if (res.status === 401) {
+        window.sessionStorage.removeItem("evalDashboardKey");
+        alert("Incorrect key — try again.");
+        return;
+      }
+      if (!res.ok) {
+        alert("Delete failed — check console for details.");
+        console.error(await res.text());
+        return;
+      }
+      setRuns((prev) => prev.filter((r) => r.id !== id));
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function sendToSlack(id: string | number) {
+    const key = getKey();
+    if (!key) return;
+
+    setSaving(id);
+    try {
+      const res = await fetch(`/api/eval-results/${id}/send-slack`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}` },
+      });
+      if (res.status === 401) {
+        window.sessionStorage.removeItem("evalDashboardKey");
+        alert("Incorrect key — try again.");
+        return;
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(body.error || "Failed to send to Slack.");
+        return;
+      }
+      alert("Sent to Slack.");
+    } finally {
+      setSaving(null);
+    }
+  }
+
   if (loading) {
     return <main style={{ padding: 32 }}>Loading…</main>;
   }
@@ -150,6 +203,36 @@ export default function ReviewPage() {
                 }}
               >
                 {saving === r.id ? "Saving…" : "Save"}
+              </button>
+
+              <button
+                onClick={() => sendToSlack(r.id)}
+                disabled={saving === r.id}
+                style={{
+                  padding: "6px 16px",
+                  borderRadius: 8,
+                  border: "1px solid #4a154b",
+                  background: "#4a154b",
+                  color: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                Send to Slack
+              </button>
+
+              <button
+                onClick={() => remove(r.id)}
+                disabled={saving === r.id}
+                style={{
+                  padding: "6px 16px",
+                  borderRadius: 8,
+                  border: "1px solid #b91c1c",
+                  background: "#fff",
+                  color: "#b91c1c",
+                  cursor: "pointer",
+                }}
+              >
+                Delete
               </button>
             </div>
           </div>

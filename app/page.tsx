@@ -1,4 +1,5 @@
 import { listRuns, ensureSchema } from "@/lib/db";
+import StatusChart from "./StatusChart";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -43,6 +44,8 @@ export default async function DashboardPage({
       <p style={{ color: "#5a6478", marginBottom: 24 }}>
         Dynamic eval results, pushed automatically from GitHub Actions.
       </p>
+
+      <StatusChart runs={runs as { status: string }[]} />
 
       <form style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
         <select name="environment" defaultValue={searchParams.environment ?? ""}>

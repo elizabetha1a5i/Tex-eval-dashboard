@@ -79,6 +79,15 @@ export async function updateRun(id: string | number, fields: { status?: string; 
   }
 }
 
+export async function deleteRun(id: string | number) {
+  await sql`DELETE FROM eval_runs WHERE id = ${id};`;
+}
+
+export async function getRunById(id: string | number) {
+  const { rows } = await sql`SELECT * FROM eval_runs WHERE id = ${id} LIMIT 1;`;
+  return rows[0] ?? null;
+}
+
 export type RunFilters = {
   environment?: string;
   category?: string;
