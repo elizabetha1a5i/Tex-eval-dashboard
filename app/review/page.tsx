@@ -99,6 +99,7 @@ function ReviewList({ authKey, focusId }: { authKey: string; focusId: string | n
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, { status: string; notes: string }>>({});
   const [selected, setSelected] = useState<Set<string | number>>(new Set());
+  const [filters, setFilters] = useState({ environment: "", category: "", status: "", dateFrom: "", dateTo: "" });
 
   function toggleSelected(id: string | number) {
     setSelected((prev) => {
@@ -114,7 +115,7 @@ function ReviewList({ authKey, focusId }: { authKey: string; focusId: string | n
   }
 
   useEffect(() => {
-    fetch("/api/eval-results?limit=200")
+    fetch("/api/eval-results?limit=1000")
       .then((r) => r.json())
       .then((data) => {
         setRuns(data.runs ?? []);
@@ -126,6 +127,18 @@ function ReviewList({ authKey, focusId }: { authKey: string; focusId: string | n
       })
       .finally(() => setLoading(false));
   }, []);
+
+  const categories = Array.from(new Set(runs.map((r) => r.category).filter(Boolean)));
+  const environments = Array.from(new Set(runs.map((r) => r.environment).filter(Boolean)));
+
+  const filteredRuns = runs.filter((r) => {
+    if (filters.environment && r.environment !== filters.environment) return false;
+    if (filters.category && r.category !== filters.category) return false;
+    if (filters.status && (r.status || "").toUpperCase() !== filters.status.toUpperCase()) return false;
+    if (filters.dateFrom && new Date(r.run_date) < new Date(filters.dateFrom)) return false;
+    if (filters.dateTo && new Date(r.run_date) > new Date(`${filters.dateTo}T23:59:59.999`)) return false;
+    return true;
+  });
 
   function authHeaders(extra?: Record<string, string>) {
     return { Authorization: `Bearer ${authKey}`, ...(extra ?? {}) };
@@ -201,7 +214,7 @@ function ReviewList({ authKey, focusId }: { authKey: string; focusId: string | n
     return <main style={{ padding: 32 }}>Loading…</main>;
   }
 
-  const visibleRuns = focusId ? runs.filter((r) => String(r.id) === String(focusId)) : runs;
+  const visibleRuns = focusId ? runs.filter((r) => String(r.id) === String(focusId)) : filteredRuns;
 
   return (
     <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
@@ -214,6 +227,58 @@ function ReviewList({ authKey, focusId }: { authKey: string; focusId: string | n
         <a href="/review" style={{ color: "#258ed8", fontSize: 13, fontWeight: 600, display: "inline-block", marginBottom: 16 }}>
           ← Back to all results
         </a>
+      )}
+
+      {!focusId && (
+        <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+          <select
+            value={filters.environment}
+            onChange={(e) => setFilters((f) => ({ ...f, environment: e.target.value }))}
+          >
+            <option value="">All environments</option>
+            {environments.map((e) => (
+              <option key={e} value={e}>{e}</option>
+            ))}
+          </select>
+          <select
+            value={filters.category}
+            onChange={(e) => setFilters((f) => ({ ...f, category: e.target.value }))}
+          >
+            <option value="">All categories</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+          >
+            <option value="">All statuses</option>
+            <option value="pass">Pass</option>
+            <option value="warn">Warn</option>
+            <option value="fail">Fail</option>
+            <option value="error">Error</option>
+          </select>
+          <input
+            type="date"
+            value={filters.dateFrom}
+            onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))}
+            style={{ border: "1.5px solid #e8eaf2", borderRadius: 8, padding: "5px 10px", fontSize: 12 }}
+          />
+          <span style={{ color: "#9ea3b8", fontSize: 12, alignSelf: "center" }}>to</span>
+          <input
+            type="date"
+            value={filters.dateTo}
+            onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))}
+            style={{ border: "1.5px solid #e8eaf2", borderRadius: 8, padding: "5px 10px", fontSize: 12 }}
+          />
+          <button
+            onClick={() => setFilters({ environment: "", category: "", status: "", dateFrom: "", dateTo: "" })}
+            style={{ padding: "6px 16px", borderRadius: 8, border: "1px solid #ccc" }}
+          >
+            Clear
+          </button>
+        </div>
       )}
 
       {!focusId && visibleRuns.length > 0 && (
