@@ -64,15 +64,8 @@ export async function POST(req: NextRequest) {
       ],
     },
     {
-      type: "actions",
-      elements: [
-        {
-          type: "button",
-          text: { type: "plain_text", text: "📊 View Dashboard", emoji: true },
-          url: origin,
-          style: "primary",
-        },
-      ],
+      type: "section",
+      text: { type: "mrkdwn", text: `📊 <${origin}|View Dashboard>` },
     },
   ];
 
