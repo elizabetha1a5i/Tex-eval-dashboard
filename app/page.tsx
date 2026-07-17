@@ -1,6 +1,7 @@
 import { listRuns, ensureSchema } from "@/lib/db";
 import { StatTiles, ResultsDonut, CategoryBreakdown, PassRateOverTime } from "./Charts";
 import SendToSlackButton from "./SendToSlackButton";
+import CollapsibleTable from "./CollapsibleTable";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -120,8 +121,26 @@ export default async function DashboardPage({
         <button type="submit" style={{ padding: "6px 16px", borderRadius: 8, border: "1px solid #ccc" }}>
           Filter
         </button>
+        {queryString && (
+          <a
+            href="/"
+            style={{
+              padding: "6px 16px",
+              borderRadius: 8,
+              border: "1px solid #ccc",
+              color: "#5a6478",
+              fontSize: 13,
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+            }}
+          >
+            Clear Filters
+          </a>
+        )}
       </form>
 
+      <CollapsibleTable>
       <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
@@ -183,6 +202,7 @@ export default async function DashboardPage({
           </tbody>
         </table>
       </div>
+      </CollapsibleTable>
     </main>
   );
 }
