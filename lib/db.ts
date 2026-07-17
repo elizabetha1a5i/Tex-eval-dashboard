@@ -98,15 +98,24 @@ export type RunFilters = {
 };
 
 export async function listRuns(filters: RunFilters) {
+  // Treat empty strings the same as "not set" — an empty string cast to
+  // ::timestamptz throws in Postgres, unlike null, and callers (query
+  // params from a form) commonly send "" rather than omitting the key.
+  const environment = filters.environment || null;
+  const category = filters.category || null;
+  const status = filters.status || null;
+  const dateFrom = filters.dateFrom || null;
+  const dateTo = filters.dateTo || null;
   const limit = filters.limit ?? 200;
+
   const { rows } = await sql`
     SELECT * FROM eval_runs
     WHERE
-      (${filters.environment ?? null}::text IS NULL OR environment = ${filters.environment ?? null})
-      AND (${filters.category ?? null}::text IS NULL OR category = ${filters.category ?? null})
-      AND (${filters.status ?? null}::text IS NULL OR UPPER(status) = UPPER(${filters.status ?? null}))
-      AND (${filters.dateFrom ?? null}::timestamptz IS NULL OR run_date >= ${filters.dateFrom ?? null})
-      AND (${filters.dateTo ?? null}::timestamptz IS NULL OR run_date <= ${filters.dateTo ?? null})
+      (${environment}::text IS NULL OR environment = ${environment})
+      AND (${category}::text IS NULL OR category = ${category})
+      AND (${status}::text IS NULL OR UPPER(status) = UPPER(${status}))
+      AND (${dateFrom}::timestamptz IS NULL OR run_date >= ${dateFrom})
+      AND (${dateTo}::timestamptz IS NULL OR run_date <= ${dateTo})
     ORDER BY run_date DESC
     LIMIT ${limit};
   `;
