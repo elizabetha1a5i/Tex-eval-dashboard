@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 
 type Run = {
   id: string | number;
@@ -14,17 +15,84 @@ type Run = {
   notes: string | null;
 };
 
-function getKey(): string | null {
+function getStoredKey(): string | null {
   if (typeof window === "undefined") return null;
-  let key = window.sessionStorage.getItem("evalDashboardKey");
-  if (!key) {
-    key = window.prompt("Enter the dashboard key to make edits:");
-    if (key) window.sessionStorage.setItem("evalDashboardKey", key);
-  }
-  return key;
+  return window.sessionStorage.getItem("evalDashboardKey");
 }
 
-export default function ReviewPage() {
+function LoginGate({ onSuccess }: { onSuccess: (key: string) => void }) {
+  const [input, setInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  async function submit() {
+    if (!input) return;
+    setChecking(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: input }),
+      });
+      if (res.ok) {
+        window.sessionStorage.setItem("evalDashboardKey", input);
+        onSuccess(input);
+      } else {
+        setError("Incorrect key.");
+      }
+    } catch {
+      setError("Could not verify key — try again.");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  return (
+    <main style={{ maxWidth: 400, margin: "120px auto", padding: 24, textAlign: "center" }}>
+      <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Review Results</h1>
+      <p style={{ color: "#5a6478", fontSize: 13, marginBottom: 20 }}>
+        Enter the dashboard key to access reviewer tools.
+      </p>
+      <input
+        type="password"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && submit()}
+        placeholder="Dashboard key"
+        autoFocus
+        style={{
+          width: "100%",
+          padding: "10px 14px",
+          borderRadius: 8,
+          border: "1px solid #ccc",
+          fontSize: 14,
+          marginBottom: 12,
+          boxSizing: "border-box",
+        }}
+      />
+      <button
+        onClick={submit}
+        disabled={checking || !input}
+        style={{
+          width: "100%",
+          padding: "10px 14px",
+          borderRadius: 8,
+          border: "1px solid #258ed8",
+          background: "#258ed8",
+          color: "#fff",
+          fontWeight: 600,
+          cursor: "pointer",
+        }}
+      >
+        {checking ? "Checking…" : "Enter"}
+      </button>
+      {error && <p style={{ color: "#b91c1c", fontSize: 13, marginTop: 12 }}>{error}</p>}
+    </main>
+  );
+}
+
+function ReviewList({ authKey, focusId }: { authKey: string; focusId: string | null }) {
   const [runs, setRuns] = useState<Run[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | number | null>(null);
@@ -42,7 +110,7 @@ export default function ReviewPage() {
   }
 
   function toggleSelectAll() {
-    setSelected((prev) => (prev.size === runs.length ? new Set() : new Set(runs.map((r) => r.id))));
+    setSelected((prev) => (prev.size === visibleRuns.length ? new Set() : new Set(visibleRuns.map((r) => r.id))));
   }
 
   useEffect(() => {
@@ -59,54 +127,41 @@ export default function ReviewPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function save(id: string | number) {
-    const key = getKey();
-    if (!key) return;
+  function authHeaders(extra?: Record<string, string>) {
+    return { Authorization: `Bearer ${authKey}`, ...(extra ?? {}) };
+  }
 
+  function handleUnauthorized() {
+    window.sessionStorage.removeItem("evalDashboardKey");
+    alert("Key no longer valid — please refresh and re-enter it.");
+  }
+
+  async function save(id: string | number) {
     setSaving(id);
     try {
       const res = await fetch(`/api/eval-results/${id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${key}`,
-        },
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(drafts[id]),
       });
-      if (res.status === 401) {
-        window.sessionStorage.removeItem("evalDashboardKey");
-        alert("Incorrect key — try again.");
-        return;
-      }
+      if (res.status === 401) return handleUnauthorized();
       if (!res.ok) {
         alert("Save failed — check console for details.");
         console.error(await res.text());
         return;
       }
-      setRuns((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, ...drafts[id] } : r))
-      );
+      setRuns((prev) => prev.map((r) => (r.id === id ? { ...r, ...drafts[id] } : r)));
     } finally {
       setSaving(null);
     }
   }
 
   async function remove(id: string | number) {
-    const key = getKey();
-    if (!key) return;
     if (!window.confirm("Delete this test result permanently?")) return;
-
     setSaving(id);
     try {
-      const res = await fetch(`/api/eval-results/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${key}` },
-      });
-      if (res.status === 401) {
-        window.sessionStorage.removeItem("evalDashboardKey");
-        alert("Incorrect key — try again.");
-        return;
-      }
+      const res = await fetch(`/api/eval-results/${id}`, { method: "DELETE", headers: authHeaders() });
+      if (res.status === 401) return handleUnauthorized();
       if (!res.ok) {
         alert("Delete failed — check console for details.");
         console.error(await res.text());
@@ -119,8 +174,6 @@ export default function ReviewPage() {
   }
 
   async function bulkDelete() {
-    const key = getKey();
-    if (!key) return;
     if (selected.size === 0) return;
     if (!window.confirm(`Delete ${selected.size} selected result(s) permanently?`)) return;
 
@@ -128,30 +181,17 @@ export default function ReviewPage() {
     try {
       const ids = Array.from(selected);
       const results = await Promise.all(
-        ids.map((id) =>
-          fetch(`/api/eval-results/${id}`, {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${key}` },
-          })
-        )
+        ids.map((id) => fetch(`/api/eval-results/${id}`, { method: "DELETE", headers: authHeaders() }))
       );
 
-      if (results.some((r) => r.status === 401)) {
-        window.sessionStorage.removeItem("evalDashboardKey");
-        alert("Incorrect key — try again.");
-        return;
-      }
+      if (results.some((r) => r.status === 401)) return handleUnauthorized();
 
-      const deletedIds = new Set(
-        ids.filter((_, i) => results[i].ok)
-      );
+      const deletedIds = new Set(ids.filter((_, i) => results[i].ok));
       setRuns((prev) => prev.filter((r) => !deletedIds.has(r.id)));
       setSelected(new Set());
 
       const failedCount = ids.length - deletedIds.size;
-      if (failedCount > 0) {
-        alert(`${failedCount} deletion(s) failed — check console for details.`);
-      }
+      if (failedCount > 0) alert(`${failedCount} deletion(s) failed — check console for details.`);
     } finally {
       setBulkDeleting(false);
     }
@@ -161,6 +201,8 @@ export default function ReviewPage() {
     return <main style={{ padding: 32 }}>Loading…</main>;
   }
 
+  const visibleRuns = focusId ? runs.filter((r) => String(r.id) === String(focusId)) : runs;
+
   return (
     <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
       <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Review Results</h1>
@@ -168,14 +210,16 @@ export default function ReviewPage() {
         Amend a result's status or add reviewer notes. Changes save directly to the database.
       </p>
 
-      {runs.length > 0 && (
+      {focusId && (
+        <a href="/review" style={{ color: "#258ed8", fontSize: 13, fontWeight: 600, display: "inline-block", marginBottom: 16 }}>
+          ← Back to all results
+        </a>
+      )}
+
+      {!focusId && visibleRuns.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#5a6478" }}>
-            <input
-              type="checkbox"
-              checked={selected.size === runs.length}
-              onChange={toggleSelectAll}
-            />
+            <input type="checkbox" checked={selected.size === visibleRuns.length} onChange={toggleSelectAll} />
             Select all
           </label>
           <button
@@ -196,7 +240,7 @@ export default function ReviewPage() {
         </div>
       )}
 
-      {runs.map((r) => {
+      {visibleRuns.map((r) => {
         const draft = drafts[r.id] ?? { status: r.status, notes: r.notes ?? "" };
         return (
           <div
@@ -211,11 +255,9 @@ export default function ReviewPage() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
               <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <input
-                  type="checkbox"
-                  checked={selected.has(r.id)}
-                  onChange={() => toggleSelected(r.id)}
-                />
+                {!focusId && (
+                  <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelected(r.id)} />
+                )}
                 <strong>{r.name}</strong>
               </label>
               <span style={{ color: "#9ea3b8", fontSize: 12 }}>
@@ -287,7 +329,54 @@ export default function ReviewPage() {
         );
       })}
 
-      {runs.length === 0 && <p style={{ color: "#9ea3b8" }}>No results to review yet.</p>}
+      {visibleRuns.length === 0 && (
+        <p style={{ color: "#9ea3b8" }}>
+          {focusId ? "That result could not be found." : "No results to review yet."}
+        </p>
+      )}
     </main>
+  );
+}
+
+function ReviewPageInner() {
+  const searchParams = useSearchParams();
+  const focusId = searchParams.get("id");
+  const [authKey, setAuthKey] = useState<string | null>(null);
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    const stored = getStoredKey();
+    if (!stored) {
+      setChecked(true);
+      return;
+    }
+    fetch("/api/auth/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: stored }),
+    })
+      .then((res) => {
+        if (res.ok) setAuthKey(stored);
+        else window.sessionStorage.removeItem("evalDashboardKey");
+      })
+      .finally(() => setChecked(true));
+  }, []);
+
+  if (!checked) {
+    return <main style={{ padding: 32 }}>Loading…</main>;
+  }
+
+  if (!authKey) {
+    return <LoginGate onSuccess={(key) => setAuthKey(key)} />;
+  }
+
+  return <ReviewList authKey={authKey} focusId={focusId} />;
+}
+
+export default function ReviewPage() {
+  return (
+    <Suspense fallback={<main style={{ padding: 32 }}>Loading…</main>}>
+      <ReviewPageInner />
+    </Suspense>
   );
 }

@@ -123,7 +123,7 @@ export default async function DashboardPage({
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ textAlign: "left", background: "#f5f6fa" }}>
-              {["Date", "Name", "Category", "Env", "Status", "Score", "Importance", "Summary", "Screenshot", "Transcript"].map((h) => (
+              {["Date", "Name", "Category", "Env", "Status", "Score", "Importance", "Summary", "Screenshot", "Transcript", "Review"].map((h) => (
                 <th key={h} style={{ padding: "10px 14px", borderBottom: "1px solid #e8eaf2" }}>{h}</th>
               ))}
             </tr>
@@ -164,12 +164,15 @@ export default async function DashboardPage({
                       </details>
                     ) : "-"}
                   </td>
+                  <td style={{ padding: "10px 14px" }}>
+                    <a href={`/review?id=${r.id}`} style={{ color: "#258ed8" }}>Review →</a>
+                  </td>
                 </tr>
               );
             })}
             {runs.length === 0 && (
               <tr>
-                <td colSpan={10} style={{ padding: 24, textAlign: "center", color: "#9ea3b8" }}>
+                <td colSpan={11} style={{ padding: 24, textAlign: "center", color: "#9ea3b8" }}>
                   No results yet — run the eval workflow to populate this dashboard.
                 </td>
               </tr>
