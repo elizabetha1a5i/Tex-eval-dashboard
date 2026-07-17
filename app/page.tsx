@@ -33,8 +33,11 @@ export default async function DashboardPage({
     limit: 200,
   });
 
-  const categories = Array.from(new Set(runs.map((r: any) => r.category).filter(Boolean)));
-  const environments = Array.from(new Set(runs.map((r: any) => r.environment).filter(Boolean)));
+  // Dropdown options come from the full unfiltered set, so they don't
+  // disappear once a filter narrows the visible results.
+  const allRuns = await listRuns({ limit: 1000 });
+  const categories = Array.from(new Set(allRuns.map((r: any) => r.category).filter(Boolean)));
+  const environments = Array.from(new Set(allRuns.map((r: any) => r.environment).filter(Boolean)));
 
   const qs = new URLSearchParams();
   if (searchParams.environment) qs.set("environment", searchParams.environment);

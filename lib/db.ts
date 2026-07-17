@@ -104,7 +104,7 @@ export async function listRuns(filters: RunFilters) {
     WHERE
       (${filters.environment ?? null}::text IS NULL OR environment = ${filters.environment ?? null})
       AND (${filters.category ?? null}::text IS NULL OR category = ${filters.category ?? null})
-      AND (${filters.status ?? null}::text IS NULL OR status = ${filters.status ?? null})
+      AND (${filters.status ?? null}::text IS NULL OR UPPER(status) = UPPER(${filters.status ?? null}))
       AND (${filters.dateFrom ?? null}::timestamptz IS NULL OR run_date >= ${filters.dateFrom ?? null})
       AND (${filters.dateTo ?? null}::timestamptz IS NULL OR run_date <= ${filters.dateTo ?? null})
     ORDER BY run_date DESC
