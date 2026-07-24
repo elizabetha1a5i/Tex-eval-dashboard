@@ -133,13 +133,10 @@ export async function ensureTestCaseSchema() {
 }
 
 export async function listTestCases(filters: { status?: string[] } = {}) {
-  const statuses = filters.status && filters.status.length ? filters.status : null;
-  const { rows } = await sql`
-    SELECT * FROM test_cases
-    WHERE (${statuses}::text[] IS NULL OR status = ANY(${statuses}::text[]))
-    ORDER BY id ASC;
-  `;
-  return rows;
+  const { rows } = await sql`SELECT * FROM test_cases ORDER BY id ASC;`;
+  if (!filters.status || !filters.status.length) return rows;
+  const statuses = new Set(filters.status);
+  return rows.filter((r) => statuses.has(r.status));
 }
 
 export async function getTestCase(id: string) {
