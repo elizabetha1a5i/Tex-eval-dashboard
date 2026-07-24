@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { TestCaseLibraryEditor } from "../TestCaseLibrary";
 
 type Run = {
   id: string | number;
@@ -228,6 +229,8 @@ function ReviewList({ authKey, focusId }: { authKey: string; focusId: string | n
           ← Back to all results
         </a>
       )}
+
+      {!focusId && <TestCaseLibraryEditor authKey={authKey} />}
 
       {!focusId && (
         <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>

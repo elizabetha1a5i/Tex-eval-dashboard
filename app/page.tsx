@@ -1,7 +1,8 @@
-import { listRuns, ensureSchema } from "@/lib/db";
+import { listRuns, ensureSchema, listTestCases, ensureTestCaseSchema } from "@/lib/db";
 import { StatTiles, ResultsDonut, CategoryBreakdown, PassRateOverTime } from "./Charts";
 import SendToSlackButton from "./SendToSlackButton";
 import CollapsibleTable from "./CollapsibleTable";
+import { TestCaseLibraryReadOnly } from "./TestCaseLibrary";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -25,6 +26,8 @@ export default async function DashboardPage({
   };
 }) {
   await ensureSchema();
+  await ensureTestCaseSchema();
+  const testCases = await listTestCases({ status: ["active", "approved"] });
   const runs = await listRuns({
     environment: searchParams.environment,
     category: searchParams.category,
@@ -85,6 +88,8 @@ export default async function DashboardPage({
       <div style={{ marginBottom: 20 }}>
         <CategoryBreakdown runs={runs as any} />
       </div>
+
+      <TestCaseLibraryReadOnly testCases={testCases as any} />
 
       <form style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
         <select name="environment" defaultValue={searchParams.environment ?? ""}>

@@ -88,6 +88,110 @@ export async function getRunById(id: string | number) {
   return rows[0] ?? null;
 }
 
+// ============================================================================
+// TEST CASES — versioned test-case library (draft/in_review/approved/active/deprecated)
+// ============================================================================
+
+export type TestCaseHistoryEntry = {
+  version: number;
+  changed_at: string;
+  changed_by: string;
+  note?: string;
+};
+
+export type TestCase = {
+  id: string;
+  title: string;
+  category?: string | null;
+  preconditions?: string | null;
+  conversation: { user: string; wait_for_response?: boolean }[];
+  expected_result?: string | null;
+  owner?: string | null;
+  status: "draft" | "in_review" | "approved" | "active" | "deprecated";
+  requirement_ref?: string | null;
+};
+
+export async function ensureTestCaseSchema() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS test_cases (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      category TEXT,
+      preconditions TEXT,
+      conversation JSONB NOT NULL,
+      expected_result TEXT,
+      owner TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
+      version INT NOT NULL DEFAULT 1,
+      requirement_ref TEXT,
+      history JSONB NOT NULL DEFAULT '[]',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_test_cases_status ON test_cases (status);`;
+}
+
+export async function listTestCases(filters: { status?: string[] } = {}) {
+  const statuses = filters.status && filters.status.length ? filters.status : null;
+  const { rows } = await sql`
+    SELECT * FROM test_cases
+    WHERE (${statuses}::text[] IS NULL OR status = ANY(${statuses}::text[]))
+    ORDER BY id ASC;
+  `;
+  return rows;
+}
+
+export async function getTestCase(id: string) {
+  const { rows } = await sql`SELECT * FROM test_cases WHERE id = ${id} LIMIT 1;`;
+  return rows[0] ?? null;
+}
+
+export async function upsertTestCase(tc: Partial<TestCase> & { id: string }, changedBy: string) {
+  const existing = await getTestCase(tc.id);
+  const now = new Date().toISOString();
+
+  if (!existing) {
+    await sql`
+      INSERT INTO test_cases (
+        id, title, category, preconditions, conversation, expected_result,
+        owner, status, version, requirement_ref, history
+      ) VALUES (
+        ${tc.id}, ${tc.title}, ${tc.category ?? null}, ${tc.preconditions ?? null},
+        ${JSON.stringify(tc.conversation ?? [])}, ${tc.expected_result ?? null},
+        ${tc.owner ?? null}, ${tc.status ?? "draft"}, 1, ${tc.requirement_ref ?? null}, '[]'
+      );
+    `;
+    return { id: tc.id, created: true };
+  }
+
+  const history: TestCaseHistoryEntry[] = Array.isArray(existing.history) ? existing.history : [];
+  history.push({
+    version: existing.version,
+    changed_at: now,
+    changed_by: changedBy,
+    note: `status=${existing.status}`,
+  });
+  const nextVersion = existing.version + 1;
+
+  await sql`
+    UPDATE test_cases SET
+      title = ${tc.title ?? existing.title},
+      category = ${tc.category ?? existing.category},
+      preconditions = ${tc.preconditions ?? existing.preconditions},
+      conversation = ${JSON.stringify(tc.conversation ?? existing.conversation)},
+      expected_result = ${tc.expected_result ?? existing.expected_result},
+      owner = ${tc.owner ?? existing.owner},
+      status = ${tc.status ?? existing.status},
+      version = ${nextVersion},
+      requirement_ref = ${tc.requirement_ref ?? existing.requirement_ref},
+      history = ${JSON.stringify(history)},
+      updated_at = ${now}
+    WHERE id = ${tc.id};
+  `;
+  return { id: tc.id, created: false, version: nextVersion };
+}
+
 export type RunFilters = {
   environment?: string;
   category?: string;
