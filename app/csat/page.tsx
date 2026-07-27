@@ -90,7 +90,7 @@ export default async function CsatPage({
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ textAlign: "left", background: "#f5f6fa" }}>
-              {["Date", "Customer", "Sentiment", "Score", "Resolved", "Summary", "Transcript"].map((h) => (
+              {["Date", "Customer", "Sentiment", "Score", "Resolved", "No Reply", "Rule Status", "Summary", "Transcript"].map((h) => (
                 <th key={h} style={{ padding: "10px 14px", borderBottom: "1px solid #e8eaf2" }}>{h}</th>
               ))}
             </tr>
@@ -111,6 +111,26 @@ export default async function CsatPage({
                   </td>
                   <td style={{ padding: "10px 14px" }}>{c.csat_score != null ? `${c.csat_score}/5` : "-"}</td>
                   <td style={{ padding: "10px 14px" }}>{c.resolved === true ? "Yes" : c.resolved === false ? "No" : "-"}</td>
+                  <td style={{ padding: "10px 14px" }}>
+                    {c.no_reply === true ? (
+                      <span style={{ background: "#fef2f2", color: "#b91c1c", padding: "3px 10px", borderRadius: 20, fontWeight: 700, fontSize: 11, textTransform: "uppercase" }}>
+                        No Reply
+                      </span>
+                    ) : "-"}
+                  </td>
+                  <td style={{ padding: "10px 14px" }}>
+                    {c.qa_status ? (
+                      <span
+                        style={{
+                          background: c.qa_status === "PASS" ? "#e6f4ea" : c.qa_status === "WARN" ? "#fef9e7" : "#fef2f2",
+                          color: c.qa_status === "PASS" ? "#137333" : c.qa_status === "WARN" ? "#7a5200" : "#b91c1c",
+                          padding: "3px 10px", borderRadius: 20, fontWeight: 700, fontSize: 11, textTransform: "uppercase",
+                        }}
+                      >
+                        {c.qa_status}
+                      </span>
+                    ) : "-"}
+                  </td>
                   <td style={{ padding: "10px 14px", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis" }}>
                     {c.summary || "-"}
                   </td>
@@ -127,7 +147,7 @@ export default async function CsatPage({
             })}
             {conversations.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ padding: 24, textAlign: "center", color: "#9ea3b8" }}>
+                <td colSpan={9} style={{ padding: 24, textAlign: "center", color: "#9ea3b8" }}>
                   No conversations analyzed yet — run analyze_community_csat.py against a Community.com export.
                 </td>
               </tr>

@@ -104,6 +104,15 @@ export type CsatConversation = {
   key_themes?: string | null;
   summary?: string | null;
   source_file?: string | null;
+  // Same rule-based QA scoring used for synthetic test cases
+  // (evaluate_test_alignment/calculate_mse_penalty), applied to this real
+  // conversation.
+  qa_status?: "PASS" | "WARN" | "FAIL" | null;
+  qa_alignment_score?: number | null;
+  qa_issues?: string | null;
+  // True if the conversation ends on the customer's turn with no Tex
+  // follow-up — a critical failure (Tex went silent).
+  no_reply?: boolean | null;
 };
 
 export async function ensureCsatSchema() {
@@ -124,8 +133,13 @@ export async function ensureCsatSchema() {
       imported_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `;
+  await sql`ALTER TABLE csat_conversations ADD COLUMN IF NOT EXISTS qa_status TEXT;`;
+  await sql`ALTER TABLE csat_conversations ADD COLUMN IF NOT EXISTS qa_alignment_score NUMERIC;`;
+  await sql`ALTER TABLE csat_conversations ADD COLUMN IF NOT EXISTS qa_issues TEXT;`;
+  await sql`ALTER TABLE csat_conversations ADD COLUMN IF NOT EXISTS no_reply BOOLEAN;`;
   await sql`CREATE INDEX IF NOT EXISTS idx_csat_occurred_at ON csat_conversations (occurred_at DESC);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_csat_sentiment ON csat_conversations (sentiment);`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_csat_no_reply ON csat_conversations (no_reply);`;
 }
 
 export async function insertCsatConversations(rows: CsatConversation[]) {
@@ -133,12 +147,15 @@ export async function insertCsatConversations(rows: CsatConversation[]) {
     await sql`
       INSERT INTO csat_conversations (
         external_id, customer_ref, occurred_at, channel, transcript_text,
-        csat_score, sentiment, resolved, key_themes, summary, source_file
+        csat_score, sentiment, resolved, key_themes, summary, source_file,
+        qa_status, qa_alignment_score, qa_issues, no_reply
       ) VALUES (
         ${c.external_id ?? null}, ${c.customer_ref ?? null},
         ${c.occurred_at ?? null}, ${c.channel ?? "sms"}, ${c.transcript_text},
         ${c.csat_score ?? null}, ${c.sentiment ?? null}, ${c.resolved ?? null},
-        ${c.key_themes ?? null}, ${c.summary ?? null}, ${c.source_file ?? null}
+        ${c.key_themes ?? null}, ${c.summary ?? null}, ${c.source_file ?? null},
+        ${c.qa_status ?? null}, ${c.qa_alignment_score ?? null}, ${c.qa_issues ?? null},
+        ${c.no_reply ?? null}
       );
     `;
   }

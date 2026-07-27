@@ -5,6 +5,8 @@ type Conversation = {
   csat_score: number | null;
   sentiment: string | null;
   resolved: boolean | null;
+  qa_status?: string | null;
+  no_reply?: boolean | null;
 };
 
 const SENTIMENT_STYLE: Record<string, { fg: string; bg: string; label: string }> = {
@@ -47,21 +49,33 @@ export function CsatStatTiles({ conversations }: { conversations: Conversation[]
   const negativePct = total > 0 ? Math.round((negativeCount / total) * 100) : 0;
   const resolvedCount = conversations.filter((c) => c.resolved === true).length;
   const resolvedPct = total > 0 ? Math.round((resolvedCount / total) * 100) : 0;
+  const noReplyCount = conversations.filter((c) => c.no_reply === true).length;
+  const ruleFailCount = conversations.filter((c) => c.qa_status === "FAIL").length;
 
   const tiles = [
-    { label: "Avg CSAT Score", value: total ? `${avgScore}/5` : "-", sub: `${scored.length} scored` },
-    { label: "Conversations Analyzed", value: String(total), sub: "from Community.com exports" },
-    { label: "Negative Sentiment", value: `${negativePct}%`, sub: `${negativeCount} conversations` },
-    { label: "Resolution Rate", value: `${resolvedPct}%`, sub: `${resolvedCount} of ${total}` },
+    { label: "Avg CSAT Score", value: total ? `${avgScore}/5` : "-", sub: `${scored.length} scored`, critical: false },
+    { label: "Conversations Analyzed", value: String(total), sub: "from Community.com exports", critical: false },
+    { label: "Negative Sentiment", value: `${negativePct}%`, sub: `${negativeCount} conversations`, critical: false },
+    { label: "Resolution Rate", value: `${resolvedPct}%`, sub: `${resolvedCount} of ${total}`, critical: false },
+    {
+      label: "No Reply",
+      value: String(noReplyCount),
+      sub: "Tex never responded — critical",
+      critical: noReplyCount > 0,
+    },
+    { label: "Rule Failures", value: String(ruleFailCount), sub: "brand/safety/persona rules", critical: ruleFailCount > 0 },
   ];
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 20 }}>
       {tiles.map((t) => (
-        <div key={t.label} style={cardStyle}>
-          <div style={cardTitle}>{t.label}</div>
-          <div style={{ fontSize: 32, fontWeight: 800, color: "#0f1e2d" }}>{t.value}</div>
-          <div style={{ fontSize: 12, color: "#9ea3b8", marginTop: 4 }}>{t.sub}</div>
+        <div
+          key={t.label}
+          style={t.critical ? { ...cardStyle, background: "#fef2f2", border: "1px solid #fecaca" } : cardStyle}
+        >
+          <div style={{ ...cardTitle, color: t.critical ? "#b91c1c" : cardTitle.color }}>{t.label}</div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: t.critical ? "#b91c1c" : "#0f1e2d" }}>{t.value}</div>
+          <div style={{ fontSize: 12, color: t.critical ? "#b91c1c" : "#9ea3b8", marginTop: 4 }}>{t.sub}</div>
         </div>
       ))}
     </div>
