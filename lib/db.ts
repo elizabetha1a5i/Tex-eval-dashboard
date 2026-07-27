@@ -89,6 +89,88 @@ export async function getRunById(id: string | number) {
 }
 
 // ============================================================================
+// CSAT — AI-scored analysis of real customer conversations (Community.com exports)
+// ============================================================================
+
+export type CsatConversation = {
+  external_id?: string | null;
+  customer_ref?: string | null;
+  occurred_at?: string | null;
+  channel?: string | null;
+  transcript_text: string;
+  csat_score?: number | null;
+  sentiment?: "positive" | "neutral" | "negative" | null;
+  resolved?: boolean | null;
+  key_themes?: string | null;
+  summary?: string | null;
+  source_file?: string | null;
+};
+
+export async function ensureCsatSchema() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS csat_conversations (
+      id BIGSERIAL PRIMARY KEY,
+      external_id TEXT,
+      customer_ref TEXT,
+      occurred_at TIMESTAMPTZ,
+      channel TEXT DEFAULT 'sms',
+      transcript_text TEXT NOT NULL,
+      csat_score INT,
+      sentiment TEXT,
+      resolved BOOLEAN,
+      key_themes TEXT,
+      summary TEXT,
+      source_file TEXT,
+      imported_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_csat_occurred_at ON csat_conversations (occurred_at DESC);`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_csat_sentiment ON csat_conversations (sentiment);`;
+}
+
+export async function insertCsatConversations(rows: CsatConversation[]) {
+  for (const c of rows) {
+    await sql`
+      INSERT INTO csat_conversations (
+        external_id, customer_ref, occurred_at, channel, transcript_text,
+        csat_score, sentiment, resolved, key_themes, summary, source_file
+      ) VALUES (
+        ${c.external_id ?? null}, ${c.customer_ref ?? null},
+        ${c.occurred_at ?? null}, ${c.channel ?? "sms"}, ${c.transcript_text},
+        ${c.csat_score ?? null}, ${c.sentiment ?? null}, ${c.resolved ?? null},
+        ${c.key_themes ?? null}, ${c.summary ?? null}, ${c.source_file ?? null}
+      );
+    `;
+  }
+  return { inserted: rows.length };
+}
+
+export type CsatFilters = {
+  sentiment?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  limit?: number;
+};
+
+export async function listCsatConversations(filters: CsatFilters = {}) {
+  const sentiment = filters.sentiment || null;
+  const dateFrom = filters.dateFrom || null;
+  const dateTo = filters.dateTo || null;
+  const limit = filters.limit ?? 500;
+
+  const { rows } = await sql`
+    SELECT * FROM csat_conversations
+    WHERE
+      (${sentiment}::text IS NULL OR sentiment = ${sentiment})
+      AND (${dateFrom}::timestamptz IS NULL OR occurred_at >= ${dateFrom})
+      AND (${dateTo}::timestamptz IS NULL OR occurred_at <= ${dateTo})
+    ORDER BY occurred_at DESC NULLS LAST
+    LIMIT ${limit};
+  `;
+  return rows;
+}
+
+// ============================================================================
 // TEST CASES — versioned test-case library (draft/in_review/approved/active/deprecated)
 // ============================================================================
 
@@ -136,7 +218,7 @@ export async function listTestCases(filters: { status?: string[] } = {}) {
   const { rows } = await sql`SELECT * FROM test_cases ORDER BY id ASC;`;
   if (!filters.status || !filters.status.length) return rows;
   const statuses = new Set(filters.status);
-  return rows.filter((r) => statuses.has(r.status));
+  return rows.filter((r: any) => statuses.has(r.status));
 }
 
 export async function getTestCase(id: string) {

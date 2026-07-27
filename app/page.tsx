@@ -71,6 +71,7 @@ export default async function DashboardPage({
             Export CSV
           </a>
           <SendToSlackButton queryString={queryString} />
+          <a href="/csat" style={{ color: "#258ed8", fontSize: 13, fontWeight: 600 }}>Customer CSAT →</a>
           <a href="/review" style={{ color: "#258ed8", fontSize: 13, fontWeight: 600 }}>Review results →</a>
         </div>
       </div>
