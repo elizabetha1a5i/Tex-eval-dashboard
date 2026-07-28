@@ -7,7 +7,16 @@ type Conversation = {
   resolved: boolean | null;
   qa_status?: string | null;
   no_reply?: boolean | null;
+  imported_at?: string | null;
+  source_file?: string | null;
 };
+
+function parseDateRangeFromSourceFile(sourceFile: string | null | undefined): string | null {
+  if (!sourceFile) return null;
+  const match = sourceFile.match(/(\d{4}-\d{2}-\d{2})-to-(\d{4}-\d{2}-\d{2})/);
+  if (match) return `${match[1]} → ${match[2]}`;
+  return sourceFile; // e.g. a CSV filename — show as-is
+}
 
 const SENTIMENT_STYLE: Record<string, { fg: string; bg: string; label: string }> = {
   positive: { fg: "#137333", bg: "#e6f4ea", label: "Positive" },
@@ -51,6 +60,16 @@ export function CsatStatTiles({ conversations }: { conversations: Conversation[]
   const resolvedPct = total > 0 ? Math.round((resolvedCount / total) * 100) : 0;
   const noReplyCount = conversations.filter((c) => c.no_reply === true).length;
 
+  const mostRecentlyImported = conversations.reduce((latest, c) => {
+    if (!c.imported_at) return latest;
+    if (!latest || !latest.imported_at) return c;
+    return new Date(c.imported_at) > new Date(latest.imported_at) ? c : latest;
+  }, null as Conversation | null);
+  const lastRunLabel = mostRecentlyImported?.imported_at
+    ? new Date(mostRecentlyImported.imported_at).toLocaleString()
+    : "-";
+  const lastRunRange = parseDateRangeFromSourceFile(mostRecentlyImported?.source_file) ?? "no runs yet";
+
   const tiles = [
     { label: "Avg CSAT Score", value: total ? `${avgScore}/5` : "-", sub: `${scored.length} scored`, critical: false },
     { label: "Conversations Analyzed", value: String(total), sub: "from Community.com exports", critical: false },
@@ -62,6 +81,7 @@ export function CsatStatTiles({ conversations }: { conversations: Conversation[]
       sub: "Tex never responded — critical",
       critical: noReplyCount > 0,
     },
+    { label: "Last Run", value: lastRunLabel, sub: lastRunRange, critical: false },
   ];
 
   return (
