@@ -113,6 +113,8 @@ export type CsatConversation = {
   // True if the conversation ends on the customer's turn with no Tex
   // follow-up — a critical failure (Tex went silent).
   no_reply?: boolean | null;
+  notes?: string | null;
+  reviewed?: boolean | null;
 };
 
 export async function ensureCsatSchema() {
@@ -137,6 +139,8 @@ export async function ensureCsatSchema() {
   await sql`ALTER TABLE csat_conversations ADD COLUMN IF NOT EXISTS qa_alignment_score NUMERIC;`;
   await sql`ALTER TABLE csat_conversations ADD COLUMN IF NOT EXISTS qa_issues TEXT;`;
   await sql`ALTER TABLE csat_conversations ADD COLUMN IF NOT EXISTS no_reply BOOLEAN;`;
+  await sql`ALTER TABLE csat_conversations ADD COLUMN IF NOT EXISTS notes TEXT;`;
+  await sql`ALTER TABLE csat_conversations ADD COLUMN IF NOT EXISTS reviewed BOOLEAN NOT NULL DEFAULT false;`;
   await sql`CREATE INDEX IF NOT EXISTS idx_csat_occurred_at ON csat_conversations (occurred_at DESC);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_csat_sentiment ON csat_conversations (sentiment);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_csat_no_reply ON csat_conversations (no_reply);`;
@@ -160,6 +164,41 @@ export async function insertCsatConversations(rows: CsatConversation[]) {
     `;
   }
   return { inserted: rows.length };
+}
+
+export async function updateCsatConversation(
+  id: string | number,
+  fields: {
+    notes?: string;
+    reviewed?: boolean;
+    csat_score?: number;
+    sentiment?: string;
+    qa_status?: string;
+    resolved?: boolean;
+  }
+) {
+  if (fields.notes !== undefined) {
+    await sql`UPDATE csat_conversations SET notes = ${fields.notes} WHERE id = ${id};`;
+  }
+  if (fields.reviewed !== undefined) {
+    await sql`UPDATE csat_conversations SET reviewed = ${fields.reviewed} WHERE id = ${id};`;
+  }
+  if (fields.csat_score !== undefined) {
+    await sql`UPDATE csat_conversations SET csat_score = ${fields.csat_score} WHERE id = ${id};`;
+  }
+  if (fields.sentiment !== undefined) {
+    await sql`UPDATE csat_conversations SET sentiment = ${fields.sentiment} WHERE id = ${id};`;
+  }
+  if (fields.qa_status !== undefined) {
+    await sql`UPDATE csat_conversations SET qa_status = ${fields.qa_status} WHERE id = ${id};`;
+  }
+  if (fields.resolved !== undefined) {
+    await sql`UPDATE csat_conversations SET resolved = ${fields.resolved} WHERE id = ${id};`;
+  }
+}
+
+export async function deleteCsatConversation(id: string | number) {
+  await sql`DELETE FROM csat_conversations WHERE id = ${id};`;
 }
 
 export type CsatFilters = {

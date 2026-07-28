@@ -27,11 +27,27 @@ export default async function CsatPage({
     <main style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Customer CSAT</h1>
-        <a href="/" style={{ color: "#258ed8", fontSize: 13, fontWeight: 600 }}>← Back to eval dashboard</a>
+        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+          <a href="/csat/review" style={{ color: "#258ed8", fontSize: 13, fontWeight: 600 }}>Review →</a>
+          <a href="/" style={{ color: "#258ed8", fontSize: 13, fontWeight: 600 }}>← Back to eval dashboard</a>
+        </div>
       </div>
-      <p style={{ color: "#5a6478", marginBottom: 24 }}>
+      <p style={{ color: "#5a6478", marginBottom: 8 }}>
         AI-scored analysis of real customer conversations, imported from Community.com exports.
       </p>
+      {(() => {
+        const needsReview = (conversations as any[]).filter(
+          (c) => (c.no_reply === true || c.qa_status === "FAIL") && !c.reviewed
+        ).length;
+        return needsReview > 0 ? (
+          <p style={{ color: "#b91c1c", fontSize: 13, fontWeight: 600, marginBottom: 24 }}>
+            ⚠ {needsReview} flagged conversation{needsReview === 1 ? "" : "s"} need review —{" "}
+            <a href="/csat/review" style={{ color: "#b91c1c", textDecoration: "underline" }}>review now</a>
+          </p>
+        ) : (
+          <div style={{ marginBottom: 24 }} />
+        );
+      })()}
 
       <CsatStatTiles conversations={conversations as any} />
 
