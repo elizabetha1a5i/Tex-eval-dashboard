@@ -50,7 +50,6 @@ export function CsatStatTiles({ conversations }: { conversations: Conversation[]
   const resolvedCount = conversations.filter((c) => c.resolved === true).length;
   const resolvedPct = total > 0 ? Math.round((resolvedCount / total) * 100) : 0;
   const noReplyCount = conversations.filter((c) => c.no_reply === true).length;
-  const ruleFailCount = conversations.filter((c) => c.qa_status === "FAIL").length;
 
   const tiles = [
     { label: "Avg CSAT Score", value: total ? `${avgScore}/5` : "-", sub: `${scored.length} scored`, critical: false },
@@ -63,7 +62,6 @@ export function CsatStatTiles({ conversations }: { conversations: Conversation[]
       sub: "Tex never responded — critical",
       critical: noReplyCount > 0,
     },
-    { label: "Rule Failures", value: String(ruleFailCount), sub: "brand/safety/persona rules", critical: ruleFailCount > 0 },
   ];
 
   return (
